@@ -1,14 +1,15 @@
-import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
-import { AuthProvider } from '@/components/AuthProvider';
-import { getSession } from '@/lib/session';
-import './globals.css';
+import type { Metadata } from "next";
+import { Inter } from "next/font/google";
+import { AuthProvider } from "@/context/AuthProvider";
+import { ThemeProvider } from "@/context/ThemeProvider";
+import { getSession } from "@/lib/session";
+import "./globals.css";
 
-const inter = Inter({ subsets: ['latin'] });
+const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-    title: 'Secure Dashboard - Enterprise Portal',
-    description: 'Secure enterprise dashboard with role-based authentication',
+    title: "Secure Dashboard - Enterprise Portal",
+    description: "Secure enterprise dashboard with role-based authentication",
 };
 
 export default async function RootLayout({
@@ -16,7 +17,6 @@ export default async function RootLayout({
                                          }: {
     children: React.ReactNode;
 }) {
-    // Get initial session state for hydration
     const session = await getSession();
 
     const initialSession = {
@@ -27,11 +27,13 @@ export default async function RootLayout({
     };
 
     return (
-        <html lang="en">
+        <html lang="en" suppressHydrationWarning>
         <body className={inter.className}>
-        <AuthProvider initialSession={initialSession}>
-            {children}
-        </AuthProvider>
+        <ThemeProvider>
+            <AuthProvider initialSession={initialSession}>
+                {children}
+            </AuthProvider>
+        </ThemeProvider>
         </body>
         </html>
     );

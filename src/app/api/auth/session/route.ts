@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/session';
-import { isAuthenticated, getAccountDetails } from '@/lib/api';
+import { isAuthenticated } from '@/lib/api';
 
 export async function GET(request: NextRequest) {
     try {

@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/session';
-import { logout as apiLogout } from '@/lib/api';
 
 export async function POST(request: NextRequest) {
     try {
