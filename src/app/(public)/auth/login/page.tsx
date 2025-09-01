@@ -25,7 +25,7 @@ export default function LoginPage() {
 
     useEffect(() => {
         if (isAuthenticated) {
-            const destination = returnUrl ? decodeURIComponent(returnUrl) : '/dashboard';
+            const destination = returnUrl ? decodeURIComponent(returnUrl) : '';
             router.replace(destination);
         }
     }, [isAuthenticated, router, returnUrl]);
@@ -152,7 +152,7 @@ export default function LoginPage() {
                         </form>
 
                         <div className="text-center text-sm text-muted-foreground">
-                            <p>Enter your credentials to access your dashboard</p>
+                            <p>New have an account? <a href="/auth/signup" className="text-primary hover:underline">Sign up</a></p>
                         </div>
                     </CardContent>
                 </Card>

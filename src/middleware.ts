@@ -19,18 +19,20 @@ export async function middleware(request: NextRequest) {
     try {
         // Get session from request
         const response = NextResponse.next();
-        console.log("Middleware triggered for:", pathname);
+        console.log('Middleware triggered for:', pathname);
+
         const session = await getIronSession<SessionData>(
             request,
             response,
             sessionOptions
         );
-
+        console.log("Middleware session:", session);
         // Public routes - allow access
         if (isPublicRoute(pathname)) {
-            // If already authenticated, redirect from login page
-            if (pathname === '/auth/login' && session.isAuthenticated) {
-                const redirectUrl = new URL('/dashboard', request.url);
+            // If already authenticated, redirect from auth page
+            if (pathname.startsWith('/auth/') && session.isAuthenticated) {
+                const defaultRedirect = getDefaultRolePath(session.roles);
+                const redirectUrl = new URL(defaultRedirect, request.url);
                 return NextResponse.redirect(redirectUrl);
             }
             return response;
@@ -44,62 +46,59 @@ export async function middleware(request: NextRequest) {
         }
 
         // Role-based route protection
-        if (pathname.startsWith('/dashboard/superadmin')) {
-            if (!hasRole(session.roles, 'ROLE_SUPERADMIN')) {
+        if (pathname.startsWith('/admin')) {
+            if (!hasRole(session.roles, 'ROLE_ADMIN')) {
                 const unauthorizedUrl = new URL('/unauthorized', request.url);
                 return NextResponse.redirect(unauthorizedUrl);
             }
         }
 
-        if (pathname.startsWith('/dashboard/partner')) {
+        if (pathname.startsWith('/partner')) {
             if (!hasRole(session.roles, 'ROLE_PARTNERUSER')) {
                 const unauthorizedUrl = new URL('/unauthorized', request.url);
                 return NextResponse.redirect(unauthorizedUrl);
             }
         }
 
-        if (pathname.startsWith('/dashboard/traditional-backoffice')) {
-            if (!hasRole(session.roles, 'ROLE_TRADITIONALBACKOFFICE') &&
-                !hasRole(session.roles, 'ROLE_TRADITIONALBACKOFFICE_RESEARCH') &&
-                !hasRole(session.roles, 'ROLE_TRADITIONALBACKOFFICE_REQUEST_LETTER')) {
-                const unauthorizedUrl = new URL('/unauthorized', request.url);
-                return NextResponse.redirect(unauthorizedUrl);
-            }
-        }
 
-        // Root dashboard redirect
-        if (pathname === '/dashboard' || pathname === '/') {
-            const availableRoles = session.roles?.filter(role =>
-                ['ROLE_SUPERADMIN', 'ROLE_PARTNERUSER', 'ROLE_TRADITIONALBACKOFFICE', 'ROLE_TRADITIONALBACKOFFICE_RESEARCH','ROLE_TRADITIONALBACKOFFICE_REQUEST_LETTER'].includes(role)
-            ) || [];
+        // Root route `/` redirect based on user's role
+        if (pathname === '/') {
+            const availableRoles =
+                session.roles?.filter((role) =>
+                    [
+                        'ROLE_ADMIN',
+                        'ROLE_PARTNERUSER',
+                    ].includes(role)
+                ) || [];
 
             if (availableRoles.length === 0) {
                 const unauthorizedUrl = new URL('/unauthorized', request.url);
                 return NextResponse.redirect(unauthorizedUrl);
             }
 
+            // If only one role → go directly to its route
             if (availableRoles.length === 1) {
                 const role = availableRoles[0];
-                let dashboardPath = '/dashboard';
-
-                if (role === 'ROLE_SUPERADMIN') dashboardPath = '/dashboard/superadmin';
-                else if (role === 'ROLE_PARTNERUSER') dashboardPath = '/dashboard/partner';
-                else if (role === 'ROLE_TRADITIONALBACKOFFICE') dashboardPath = '/dashboard/traditional-backoffice';
-                else if (role === 'ROLE_TRADITIONALBACKOFFICE_RESEARCH') dashboardPath = '/dashboard/traditional-backoffice';
-                else if (role === 'ROLE_TRADITIONALBACKOFFICE_REQUEST_LETTER') dashboardPath = '/dashboard/traditional-backoffice';
-
-                const dashboardUrl = new URL(dashboardPath, request.url);
-                return NextResponse.redirect(dashboardUrl);
+                const portalPath = getDefaultRolePath([role]);
+                const portalUrl = new URL(portalPath, request.url);
+                return NextResponse.redirect(portalUrl);
             }
 
+            // If multiple roles and no role selected → redirect to role selection page
             if (availableRoles.length > 1 && !session.selectedRole) {
                 const roleSelectionUrl = new URL('/auth/role-selection', request.url);
                 return NextResponse.redirect(roleSelectionUrl);
             }
+
+            // If a role was already selected, redirect accordingly
+            if (session.selectedRole) {
+                const portalPath = getDefaultRolePath([session.selectedRole]);
+                const portalUrl = new URL(portalPath, request.url);
+                return NextResponse.redirect(portalUrl);
+            }
         }
 
         return response;
-
     } catch (error) {
         console.error('Middleware error:', error);
         // On error, redirect to login
@@ -108,16 +107,20 @@ export async function middleware(request: NextRequest) {
     }
 }
 
+/**
+ * Helper to map roles to default portal paths
+ */
+function getDefaultRolePath(roles?: string[]): string {
+    if (!roles || roles.length === 0) return '/unauthorized';
+
+    if (roles.includes('ROLE_ADMIN')) return '/admin';
+    if (roles.includes('ROLE_PARTNERUSER')) return '/partner';
+
+    return '/unauthorized';
+}
+
 export const config = {
     matcher: [
-        /*
-         * Match all request paths except for the ones starting with:
-         * - api (API routes)
-         * - _next/static (static files)
-         * - _next/image (image optimization files)
-         * - favicon.ico (favicon file)
-         * - public folder
-         */
         '/((?!api|_next/static|_next/image|favicon.ico|public).*)',
     ],
 };

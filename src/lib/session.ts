@@ -1,24 +1,31 @@
 import { getIronSession, SessionOptions } from 'iron-session';
 import { cookies } from 'next/headers';
+import {refreshAccessToken} from "@/lib/api";
 
 export interface UserData {
-    id?: number;
-    name?: string;
+    id: string;
+    username: string;
+    name: string;
+    firstName: string;
+    lastName: string;
     email?: string;
-    firstName?: string;
-    lastName?: string;
-    phone?: string;
-    team?: string;
-    lastUpdated?: string;
-    createdTime?: string;
-    isActive?: boolean;
+    isActive: boolean;
+    roles: string[];
+    createdAt: string;
+    updatedAt: string;
 }
 
 export interface SessionData {
-    jwt?: string;
+    accessToken?: string;
+    refreshToken?: string;
+    accessTokenExpiresAt?: string;
+    refreshTokenExpiresAt?: string;
+
     user?: UserData;
+
     roles?: string[];
     selectedRole?: string;
+
     isAuthenticated: boolean;
     lastActivity?: number;
 }

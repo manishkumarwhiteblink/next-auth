@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/session';
 import { authenticate, getAccountDetails } from '@/lib/api';
 import { getRedirectPath } from '@/lib/auth';
+import type { LoginSuccessResponse, LoginErrorResponse, AccountSuccessDetails, AccountErrorDetails } from '@/lib/api';
 
 export async function POST(request: NextRequest) {
     try {
@@ -16,35 +17,54 @@ export async function POST(request: NextRequest) {
         }
 
         // STEP 1: Authenticate user credentials
-        // This will return a JWT if successful
         const authResponse = await authenticate({ username, password });
 
-        // STEP 2: Get detailed account information
-        const accountDetails = await getAccountDetails(authResponse.jwt);
-        console.log('accountDetails', accountDetails);
-        // Create session
+        // Handle authentication errors
+        if ('type' in authResponse) {
+            const error = authResponse as LoginErrorResponse;
+            return NextResponse.json(error);
+        }
+
+        const { accessToken, refreshToken, accessTokenExpiresAt, refreshTokenExpiresAt } = authResponse as LoginSuccessResponse;
+
+        // STEP 2: Get detailed account information using accessToken
+        const accountResponse = await getAccountDetails(accessToken);
+
+        // Handle account retrieval errors
+        if ('type' in accountResponse) {
+            const accountError = accountResponse as AccountErrorDetails;
+            return NextResponse.json(accountError);
+        }
+
+        const accountDetails = accountResponse as AccountSuccessDetails;
+
+        // STEP 3: Create session
         const session = await getSession();
-        console.log("session", session);
-        session.jwt = authResponse.jwt;
+        session.accessToken = accessToken;
+        session.refreshToken = refreshToken;
+        session.accessTokenExpiresAt = accessTokenExpiresAt;
+        session.refreshTokenExpiresAt = refreshTokenExpiresAt;
+
         session.user = {
             id: accountDetails.id,
-            name: accountDetails.firstName + ' ' + accountDetails.lastName,
-            email: accountDetails.email,
-            isActive: accountDetails.isActive,
+            name: `${accountDetails.firstName} ${accountDetails.lastName}`,
+            username: accountDetails.username,
             firstName: accountDetails.firstName,
             lastName: accountDetails.lastName,
-            phone: accountDetails.phone,
-            team: accountDetails.team,
-            lastUpdated: accountDetails.lastUpdated,
-            createdTime: accountDetails.createdTime ?? undefined,
+            email: '',
+            isActive: accountDetails.enabled,
+            roles: accountDetails.roles,
+            createdAt: accountDetails.createdAt,
+            updatedAt: accountDetails.updatedAt,
         };
+
         session.roles = accountDetails.roles;
         session.isAuthenticated = true;
         session.lastActivity = Date.now();
 
         await session.save();
 
-        // Determine redirect path
+        // STEP 4: Determine redirect path
         const redirectPath = getRedirectPath(session);
 
         return NextResponse.json({

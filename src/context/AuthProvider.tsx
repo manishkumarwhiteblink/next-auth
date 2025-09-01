@@ -13,7 +13,13 @@ export interface AuthState {
 }
 
 interface AuthAction {
-    type: 'SET_LOADING' | 'SET_AUTHENTICATED' | 'SET_UNAUTHENTICATED' | 'SET_ERROR' | 'CLEAR_ERROR' | 'SET_SELECTED_ROLE';
+    type:
+        | 'SET_LOADING'
+        | 'SET_AUTHENTICATED'
+        | 'SET_UNAUTHENTICATED'
+        | 'SET_ERROR'
+        | 'CLEAR_ERROR'
+        | 'SET_SELECTED_ROLE';
     payload?: any;
 }
 
@@ -72,7 +78,18 @@ function authReducer(state: AuthState, action: AuthAction): AuthState {
 }
 
 interface AuthContextValue extends AuthState {
-    login: (username: string, password: string) => Promise<{ success: boolean; redirectPath?: string; error?: string }>;
+    login: (
+        username: string,
+        password: string
+    ) => Promise<{ success: boolean; redirectPath?: string; error?: string }>;
+    signup: (
+        data: {
+            username: string;
+            firstName: string;
+            lastName: string;
+            password: string;
+        }
+    ) => Promise<{ success: boolean; redirectPath?: string; error?: string }>;
     logout: () => Promise<void>;
     selectRole: (role: string) => Promise<void>;
     refreshSession: () => Promise<void>;
@@ -118,6 +135,55 @@ export function AuthProvider({ children, initialSession }: AuthProviderProps) {
 
             if (!response.ok) {
                 throw new Error(data.error || 'Login failed');
+            }
+
+            dispatch({
+                type: 'SET_AUTHENTICATED',
+                payload: {
+                    user: data.user,
+                    roles: data.roles,
+                },
+            });
+
+            return { success: true, redirectPath: data.redirectPath };
+        } catch (error: any) {
+            dispatch({ type: 'SET_ERROR', payload: error.message });
+            return { success: false, error: error.message };
+        }
+    };
+
+    const signup = async ({
+                              username,
+                              firstName,
+                              lastName,
+                              password,
+                          }: {
+        username: string;
+        firstName: string;
+        lastName: string;
+        password: string;
+    }) => {
+        dispatch({ type: 'SET_LOADING', payload: true });
+        dispatch({ type: 'CLEAR_ERROR' });
+
+        try {
+            const response = await fetch('/api/auth/signup', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    username,
+                    firstName,
+                    lastName,
+                    password,
+                }),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error || 'Signup failed');
             }
 
             dispatch({
@@ -194,6 +260,7 @@ export function AuthProvider({ children, initialSession }: AuthProviderProps) {
     const contextValue: AuthContextValue = {
         ...state,
         login,
+        signup, // ✅ Added signup here
         logout,
         selectRole,
         refreshSession,

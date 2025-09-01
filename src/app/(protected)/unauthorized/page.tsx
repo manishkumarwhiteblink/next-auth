@@ -11,7 +11,7 @@ export default function UnauthorizedPage() {
     const router = useRouter();
 
     const handleGoHome = () => {
-        router.push('/dashboard');
+        router.push('/');
     };
 
     return (
@@ -37,11 +37,6 @@ export default function UnauthorizedPage() {
                             Logged in as:
                         </p>
                         <p className="font-medium">{user?.name || user?.email}</p>
-                        {user?.team && (
-                            <p className="text-sm text-muted-foreground">
-                                Team: {user.team}
-                            </p>
-                        )}
                     </div>
 
                     <div className="space-y-4">

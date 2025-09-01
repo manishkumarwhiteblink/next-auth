@@ -1,35 +1,17 @@
 import { SessionData } from './session';
 
 export const ROLE_MAPPINGS = {
-    ROLE_SUPERADMIN: {
-        key: 'ROLE_SUPERADMIN',
-        name: 'Super Admin',
-        path: '/dashboard/superadmin',
+    ROLE_ADMIN: {
+        key: 'ROLE_ADMIN',
+        name: 'Admin',
+        path: '/admin',
         description: 'Full system administration access'
     },
     ROLE_PARTNERUSER: {
         key: 'ROLE_PARTNERUSER',
         name: 'Partner User',
-        path: '/dashboard/partner',
+        path: '/partner',
         description: 'Partner portal access'
-    },
-    ROLE_TRADITIONALBACKOFFICE: {
-        key: 'ROLE_TRADITIONALBACKOFFICE',
-        name: 'Traditional Back Office',
-        path: '/dashboard/traditional-backoffice',
-        description: 'Access to traditional back office features'
-    },
-    ROLE_TRADITIONALBACKOFFICE_RESEARCH : {
-        key: 'ROLE_TRADITIONALBACKOFFICE_RESEARCH',
-        name: 'Traditional Back Office Research',
-        path: '/dashboard/traditional-backoffice',
-        description: 'Access to traditional back office features'
-    },
-    ROLE_TRADITIONALBACKOFFICE_REQUEST_LETTER:{
-        key: 'ROLE_TRADITIONALBACKOFFICE_REQUEST_LETTER',
-        name: 'Traditional Back Office Request Letter',
-        path: '/dashboard/traditional-backoffice',
-        description: 'Access to request letter features in traditional back office'
     }
 } as const;
 
@@ -81,6 +63,7 @@ export function getRedirectPath(session: SessionData): string {
 export function isPublicRoute(pathname: string): boolean {
     const publicRoutes = [
         '/auth/login',
+        '/auth/signup',
         '/auth/role-selection',
         '/unauthorized',
         '/api/auth'

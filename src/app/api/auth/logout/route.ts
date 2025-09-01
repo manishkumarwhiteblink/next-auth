@@ -1,14 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/session';
+import {logout} from "@/lib/api";
 
 export async function POST(request: NextRequest) {
     try {
         const session = await getSession();
 
         // Call backend logout if we have a JWT
-        // if (session.jwt) {
-        //     await apiLogout(session.jwt);
-        // }
+        if (session.accessToken && session.refreshToken) {
+            await logout(session.accessToken,session.refreshToken);
+        }
 
         // Destroy the session
         session.destroy();

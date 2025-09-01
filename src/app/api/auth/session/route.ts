@@ -1,30 +1,56 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/session';
-import { isAuthenticated } from '@/lib/api';
+import {isAuthenticated, refreshAccessToken} from '@/lib/api';
 
-export async function GET(request: NextRequest) {
+function isExpired(ts?: string, skewSec = 30) {
+    if (!ts) return true;
+    const expMs = new Date(ts).getTime();
+    return Date.now() + skewSec * 1000 >= expMs; // refresh slightly early
+}
+
+export async function GET() {
     try {
         const session = await getSession();
 
-        if (!session.isAuthenticated || !session.jwt) {
-            return NextResponse.json({
-                isAuthenticated: false,
-                user: null,
-                roles: [],
-            });
+        if (!session.isAuthenticated || !session.accessToken || !session.refreshToken) {
+            return NextResponse.json({ isAuthenticated: false, user: null, roles: [] });
         }
-
-        // Validate JWT with backend
-        const isValidToken = await isAuthenticated(session.jwt);
-
-        if (!isValidToken) {
-            // Clear invalid session
-            session.destroy();
-            return NextResponse.json({
-                isAuthenticated: false,
-                user: null,
-                roles: [],
-            });
+        console.log("session found, validating...");
+        // 1) If access token is (almost) expired → try refresh first
+        if (isExpired(session.accessTokenExpiresAt)) {
+            try {
+                const refreshed = await refreshAccessToken(session.refreshToken);
+                // with apiCall fixed, errors will throw; success returns typed data
+                session.accessToken = (refreshed as any).accessToken;
+                session.refreshToken = (refreshed as any).refreshToken;
+                session.accessTokenExpiresAt = (refreshed as any).accessTokenExpiresAt;
+                session.refreshTokenExpiresAt = (refreshed as any).refreshTokenExpiresAt;
+                session.lastActivity = Date.now();
+                await session.save();
+            } catch (e) {
+                console.error('Token refresh failed:', e);
+                await session.destroy();
+                return NextResponse.json({ isAuthenticated: false, user: null, roles: [] });
+            }
+        } else {
+            // 2) Otherwise, verify (cheap) — if verify fails, then try refresh
+            const valid = await isAuthenticated(session.accessToken);
+            if (!valid) {
+                try {
+                    console.log("Session verify failed, trying refresh");
+                    const refreshed = await refreshAccessToken(session.refreshToken);
+                    session.accessToken = (refreshed as any).accessToken;
+                    session.refreshToken = (refreshed as any).refreshToken;
+                    session.accessTokenExpiresAt = (refreshed as any).accessTokenExpiresAt;
+                    session.refreshTokenExpiresAt = (refreshed as any).refreshTokenExpiresAt;
+                    session.lastActivity = Date.now();
+                    await session.save();
+                } catch (e) {
+                    console.error('Token refresh after verify-fail:', e);
+                    await session.destroy();
+                    return NextResponse.json({ isAuthenticated: false, user: null, roles: [] });
+                }
+            }
         }
 
         return NextResponse.json({
@@ -33,19 +59,11 @@ export async function GET(request: NextRequest) {
             roles: session.roles,
             selectedRole: session.selectedRole,
         });
-
-    } catch (error: any) {
+    } catch (error) {
         console.error('Session validation error:', error);
-
-        // Clear session on error
         const session = await getSession();
-        session.destroy();
-
-        return NextResponse.json({
-            isAuthenticated: false,
-            user: null,
-            roles: [],
-        });
+        await session.destroy();
+        return NextResponse.json({ isAuthenticated: false, user: null, roles: [] });
     }
 }
 

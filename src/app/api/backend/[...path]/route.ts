@@ -6,7 +6,7 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 async function proxyRequest(req: NextRequest, path: string[]) {
     const session = await getSession();
 
-    if (!session.isAuthenticated || !session.jwt) {
+    if (!session.isAuthenticated || !session.accessToken) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -18,7 +18,7 @@ async function proxyRequest(req: NextRequest, path: string[]) {
         if (key.toLowerCase() === "host" || key.toLowerCase() === "content-length") return;
         headers[key] = value;
     });
-    headers["Authorization"] = `Bearer ${session.jwt}`;
+    headers["Authorization"] = `Bearer ${session.accessToken}`;
 
     const contentType = req.headers.get("content-type") || "";
     const isMultipart = contentType.startsWith("multipart/form-data");

@@ -2,27 +2,27 @@ export const sideBarData = {
     navMain: [
         {
             title: "Dashboard",
-            url: "/partner",
+            url: "/admin",
             icon: "IconDashboard",
         },
         {
             title: "Todo",
-            url: "/partner/todo",
+            url: "/admin/todo",
             icon: "IconListDetails",
         },
         {
             title: "Analytics",
-            url: "/partner/analytics",
+            url: "/admin/analytics",
             icon: "IconChartBar",
         },
         {
             title: "Projects",
-            url: "/partner/projects",
+            url: "/admin/projects",
             icon: "IconFolder",
         },
         {
             title: "Team",
-            url: "/partner/team",
+            url: "/admin/team",
             icon: "IconUsers",
         },
     ],
